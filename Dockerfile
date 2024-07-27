@@ -12,29 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG GOLANG_VERSION
-
-FROM golang:${GOLANG_VERSION}-alpine3.20 as builder
+FROM golang:1.21-alpine AS builder
 
 RUN apk update \
     && apk upgrade && apk add git
 
-WORKDIR /go/src/k8s.io/ingress-nginx/images/custom-error-pages
+WORKDIR /go/src/custom-error-pages
 
 COPY . .
 
 RUN go get . && \
     CGO_ENABLED=0 go build -a -installsuffix cgo \
 	-ldflags "-s -w" \
-	-o nginx-errors .
+	-o custom-error-pages .
 
 # Use distroless as minimal base image to package the binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
 
-COPY --from=builder /go/src/k8s.io/ingress-nginx/images/custom-error-pages/nginx-errors /
-COPY --from=builder /go/src/k8s.io/ingress-nginx/images/custom-error-pages/www /www
-COPY --from=builder /go/src/k8s.io/ingress-nginx/images/custom-error-pages/etc /etc
+COPY --from=builder /go/src/custom-error-pages/custom-error-pages /
+COPY --from=builder /go/src/custom-error-pages/www /www
+COPY --from=builder /go/src/custom-error-pages/etc /etc
 USER nonroot:nonroot
 
-CMD ["/nginx-errors"]
+CMD ["/custom-error-pages"]
